@@ -9,6 +9,6 @@ defmodule Exchange do
   @spec start_link :: Agent.on_start()
   def start_link do
     initial_value = []
-    Agent.start_link(fn -> initial_value end, name: __MODULE__)
+    Agent.start_link(fn -> initial_value end)
   end
 end

@@ -8,9 +8,10 @@ defmodule ExchangeTest do
       assert is_pid(pid)
     end
 
-    test "it retruns an error when a server is already started" do
-      assert {:ok, pid} = Exchange.start_link()
-      assert {:error, {:already_started, ^pid}} = Exchange.start_link()
+    test "it allows to run multiple servers" do
+      assert {:ok, pid1} = Exchange.start_link()
+      assert {:ok, pid2} = Exchange.start_link()
+      assert pid1 != pid2
     end
   end
 end
