@@ -60,7 +60,7 @@ defmodule ExchangeTest do
       assert :ok = Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if instruction type is invalid on the 'bid' side",
+    test "it returns an error if instruction type is invalid on the 'bid' side",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :foo,
@@ -113,7 +113,7 @@ defmodule ExchangeTest do
       assert :ok = Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if instruction type is invalid on the 'ask' side",
+    test "it returns an error if instruction type is invalid on the 'ask' side",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :foo,
@@ -127,7 +127,7 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'side' param is invalid",
+    test "it returns an error if the 'side' param is invalid",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -140,7 +140,7 @@ defmodule ExchangeTest do
       assert {:error, :invalid_side_type} = Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'price_level_index' param has invalid type",
+    test "it returns an error if the 'price_level_index' param has invalid type",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -154,7 +154,7 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'price_level_index' param is lower than 1",
+    test "it returns an error if the 'price_level_index' param is lower than 1",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -168,7 +168,7 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'price' param has invalid type",
+    test "it returns an error if the 'price' param has invalid type",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -181,7 +181,7 @@ defmodule ExchangeTest do
       assert {:error, :invalid_price_type} = Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'quantity' param has invalid type",
+    test "it returns an error if the 'quantity' param has invalid type",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -195,7 +195,7 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'price' equals 0 or lower",
+    test "it returns an error if the 'price' equals 0 or lower",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -218,7 +218,7 @@ defmodule ExchangeTest do
       assert {:error, :invalid_price_value} = Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if the 'quantity' equals 0 or lower",
+    test "it returns an error if the 'quantity' equals 0 or lower",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
@@ -243,7 +243,7 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns error if server is not running",
+    test "it returns an error if server is not running",
          %{exchange_pid: exchange_pid} do
       Agent.stop(exchange_pid)
 
@@ -257,6 +257,35 @@ defmodule ExchangeTest do
 
       assert {:error, :exchange_is_not_running} =
                Exchange.send_instruction(exchange_pid, instruction)
+    end
+
+    test "it returns an error if any param is missing",
+         %{exchange_pid: exchange_pid} do
+      instruction = %{
+        instruction: :new,
+        side: :bid,
+        price_level_index: 1,
+        price: 50.0,
+        quantity: 30
+      }
+
+      assert {:error, :invalid_instruction_type} =
+               Exchange.send_instruction(exchange_pid, Map.delete(instruction, :instruction))
+
+      assert {:error, :invalid_side_type} =
+               Exchange.send_instruction(exchange_pid, Map.delete(instruction, :side))
+
+      assert {:error, :invalid_price_level_index_type} =
+               Exchange.send_instruction(
+                 exchange_pid,
+                 Map.delete(instruction, :price_level_index)
+               )
+
+      assert {:error, :invalid_price_type} =
+               Exchange.send_instruction(exchange_pid, Map.delete(instruction, :price))
+
+      assert {:error, :invalid_quantity_type} =
+               Exchange.send_instruction(exchange_pid, Map.delete(instruction, :quantity))
     end
   end
 end
