@@ -1,18 +1,14 @@
 defmodule Exchange do
   @moduledoc """
-  Documentation for `Exchange`.
+  The module simulates a simplified model of an order book of a financial exchange
+  ([https://en.wikipedia.org/wiki/Order_book_(trading)](https://en.wikipedia.org/wiki/Order_book_(trading)))
   """
 
-  @doc """
-  Hello world.
+  use Agent
 
-  ## Examples
-
-      iex> Exchange.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  @spec start_link :: Agent.on_start()
+  def start_link do
+    initial_value = []
+    Agent.start_link(fn -> initial_value end, name: __MODULE__)
   end
 end
