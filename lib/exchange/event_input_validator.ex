@@ -1,6 +1,8 @@
 defmodule Exchange.EventInputValidator do
   @moduledoc false
 
+  alias Exchange.Event
+
   @type validation_error ::
           :invalid_instruction_type
           | :invalid_side_type
@@ -11,14 +13,14 @@ defmodule Exchange.EventInputValidator do
           | :invalid_price_value
           | :invalid_price_type
 
-  @spec call(map()) :: :ok | validation_error()
+  @spec call(map()) :: {:ok, Event.t()} | validation_error()
   def call(event) do
     with :ok <- validate_instruction(event),
          :ok <- validate_side(event),
          :ok <- validate_quantity(event),
          :ok <- validate_price_level_index(event),
          :ok <- validate_price(event) do
-      :ok
+      {:ok, struct(Event, event)}
     end
   end
 
