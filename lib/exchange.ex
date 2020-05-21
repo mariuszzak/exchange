@@ -43,7 +43,9 @@ defmodule Exchange do
            side: side
          }
        ) do
-    Map.put(state, {price_level_index, side}, %{price: price, quantity: quantity})
+    state
+    |> maybe_shift_up_price_level(price_level_index, side)
+    |> insert_price_level(side, price_level_index, %{price: price, quantity: quantity})
   end
 
   defp apply_event(
@@ -56,7 +58,7 @@ defmodule Exchange do
            side: side
          }
        ) do
-    Map.put(state, {price_level_index, side}, %{price: price, quantity: quantity})
+    update_price_level(state, side, price_level_index, %{price: price, quantity: quantity})
   end
 
   defp apply_event(
@@ -71,6 +73,30 @@ defmodule Exchange do
        ) do
     # TODO: Implement delete logic
     state
+  end
+
+  defp maybe_shift_up_price_level(state, price_level_index, side) do
+    case price_level(state, side, price_level_index) do
+      nil ->
+        state
+
+      price_level ->
+        state
+        |> maybe_shift_up_price_level(price_level_index + 1, side)
+        |> insert_price_level(side, price_level_index + 1, price_level)
+    end
+  end
+
+  defp price_level(state, side, price_level_index) do
+    Map.get(state, {price_level_index, side})
+  end
+
+  defp insert_price_level(state, side, price_level_index, price_level) do
+    Map.put(state, {price_level_index, side}, price_level)
+  end
+
+  defp update_price_level(state, side, price_level_index, price_level) do
+    Map.put(state, {price_level_index, side}, price_level)
   end
 
   @spec order_book(exchange_pid :: pid(), book_depth :: integer()) :: list(map())

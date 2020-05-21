@@ -290,6 +290,11 @@ defmodule ExchangeTest do
   end
 
   describe "order_book/2" do
+    setup do
+      {:ok, exchange_pid} = Exchange.start_link()
+      [exchange_pid: exchange_pid]
+    end
+
     test "it returns order_book state" do
       {:ok, exchange_pid} = Exchange.start_link()
 
@@ -388,6 +393,120 @@ defmodule ExchangeTest do
       ]
 
       assert Exchange.order_book(exchange_pid, 2) == expected_order_book
+    end
+  end
+
+  describe "market update instruction types - instruction type: :new" do
+    test "it inserts new price level" do
+      {:ok, exchange_pid} = Exchange.start_link()
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :bid,
+        price_level_index: 1,
+        price: 50.0,
+        quantity: 30
+      })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 30}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 1) == expected_order_book
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :ask,
+        price_level_index: 1,
+        price: 55.0,
+        quantity: 25
+      })
+
+      expected_order_book = [
+        %{ask_price: 55, ask_quantity: 25, bid_price: 50.0, bid_quantity: 30}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 1) == expected_order_book
+    end
+
+    test "existing price levels with a greater or equal index are shifted up" do
+      {:ok, exchange_pid} = Exchange.start_link()
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :bid,
+        price_level_index: 1,
+        price: 50.0,
+        quantity: 25
+      })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 25},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 0, bid_quantity: 0}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 2) == expected_order_book
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :bid,
+        price_level_index: 1,
+        price: 55.0,
+        quantity: 30
+      })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 55.0, bid_quantity: 30},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 25}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 2) == expected_order_book
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :ask,
+        price_level_index: 1,
+        price: 30.0,
+        quantity: 10
+      })
+
+      expected_order_book = [
+        %{ask_price: 30.0, ask_quantity: 10, bid_price: 55.0, bid_quantity: 30},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 25}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 2) == expected_order_book
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :ask,
+        price_level_index: 1,
+        price: 40.0,
+        quantity: 15
+      })
+
+      expected_order_book = [
+        %{ask_price: 40.0, ask_quantity: 15, bid_price: 55.0, bid_quantity: 30},
+        %{ask_price: 30.0, ask_quantity: 10, bid_price: 50.0, bid_quantity: 25}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 2) == expected_order_book
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :ask,
+        price_level_index: 1,
+        price: 45.0,
+        quantity: 23
+      })
+
+      expected_order_book = [
+        %{ask_price: 45.0, ask_quantity: 23, bid_price: 55.0, bid_quantity: 30},
+        %{ask_price: 40.0, ask_quantity: 15, bid_price: 50.0, bid_quantity: 25},
+        %{ask_price: 30.0, ask_quantity: 10, bid_price: 0, bid_quantity: 0}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 3) == expected_order_book
     end
   end
 end
