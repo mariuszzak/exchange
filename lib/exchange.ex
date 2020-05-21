@@ -65,14 +65,11 @@ defmodule Exchange do
          state,
          %{
            instruction: :delete,
-           price: _price,
-           price_level_index: _price_level_index,
-           quantity: _quantity,
-           side: _side
+           side: side,
+           price_level_index: price_level_index
          }
        ) do
-    # TODO: Implement delete logic
-    state
+    delete_price_level(state, side, price_level_index)
   end
 
   defp maybe_shift_up_price_level(state, price_level_index, side) do
@@ -97,6 +94,10 @@ defmodule Exchange do
 
   defp update_price_level(state, side, price_level_index, price_level) do
     Map.put(state, {price_level_index, side}, price_level)
+  end
+
+  defp delete_price_level(state, side, price_level_index) do
+    Map.delete(state, {price_level_index, side})
   end
 
   @spec order_book(exchange_pid :: pid(), book_depth :: integer()) :: list(map())

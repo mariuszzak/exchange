@@ -171,7 +171,7 @@ defmodule ExchangeTest do
     test "it returns an error if the 'price' param has invalid type",
          %{exchange_pid: exchange_pid} do
       instruction = %{
-        instruction: :delete,
+        instruction: :new,
         side: :ask,
         price_level_index: 1,
         price: :foo,
@@ -184,7 +184,7 @@ defmodule ExchangeTest do
     test "it returns an error if the 'quantity' param has invalid type",
          %{exchange_pid: exchange_pid} do
       instruction = %{
-        instruction: :delete,
+        instruction: :new,
         side: :ask,
         price_level_index: 1,
         price: 100,
@@ -195,10 +195,21 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns an error if the 'price' equals 0 or lower",
+    test "it does not require :quantity and :price for 'delete' instruction",
          %{exchange_pid: exchange_pid} do
       instruction = %{
         instruction: :delete,
+        side: :ask,
+        price_level_index: 1
+      }
+
+      assert :ok = Exchange.send_instruction(exchange_pid, instruction)
+    end
+
+    test "it returns an error if the 'price' equals 0 or lower",
+         %{exchange_pid: exchange_pid} do
+      instruction = %{
+        instruction: :new,
         side: :ask,
         price_level_index: 1,
         price: 0,
@@ -208,7 +219,7 @@ defmodule ExchangeTest do
       assert {:error, :invalid_price_value} = Exchange.send_instruction(exchange_pid, instruction)
 
       instruction = %{
-        instruction: :delete,
+        instruction: :new,
         side: :ask,
         price_level_index: 1,
         price: -1,
@@ -221,9 +232,9 @@ defmodule ExchangeTest do
     test "it returns an error if the 'quantity' equals 0 or lower",
          %{exchange_pid: exchange_pid} do
       instruction = %{
-        instruction: :delete,
+        instruction: :new,
         side: :ask,
-        price_level_index: 0,
+        price_level_index: 1,
         price: 10,
         quantity: 0
       }
@@ -232,9 +243,9 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
 
       instruction = %{
-        instruction: :delete,
+        instruction: :new,
         side: :ask,
-        price_level_index: 0,
+        price_level_index: 1,
         price: 10,
         quantity: -1
       }
@@ -492,13 +503,14 @@ defmodule ExchangeTest do
 
       assert Exchange.order_book(exchange_pid, 2) == expected_order_book
 
-      Exchange.send_instruction(exchange_pid, %{
-        instruction: :new,
-        side: :ask,
-        price_level_index: 1,
-        price: 45.0,
-        quantity: 23
-      })
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :new,
+          side: :ask,
+          price_level_index: 1,
+          price: 45.0,
+          quantity: 23
+        })
 
       expected_order_book = [
         %{ask_price: 45.0, ask_quantity: 23, bid_price: 55.0, bid_quantity: 30},
@@ -507,6 +519,42 @@ defmodule ExchangeTest do
       ]
 
       assert Exchange.order_book(exchange_pid, 3) == expected_order_book
+    end
+  end
+
+  describe "market update instruction types - instruction type: :delete" do
+    test "it deletes price level" do
+      {:ok, exchange_pid} = Exchange.start_link()
+
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :new,
+          side: :bid,
+          price_level_index: 1,
+          price: 50.0,
+          quantity: 30
+        })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 30},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 0, bid_quantity: 0}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 2) == expected_order_book
+
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :delete,
+          side: :bid,
+          price_level_index: 1
+        })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 0, bid_quantity: 0},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 0, bid_quantity: 0}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 2) == expected_order_book
     end
   end
 end

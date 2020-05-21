@@ -36,6 +36,8 @@ defmodule Exchange.EventInputValidator do
 
   defp validate_side(_), do: {:error, :invalid_side_type}
 
+  defp validate_quantity(%{instruction: :delete}), do: :ok
+
   defp validate_quantity(%{quantity: quantity}) when is_integer(quantity) and quantity < 1,
     do: {:error, :invalid_quantity_value}
 
@@ -52,6 +54,8 @@ defmodule Exchange.EventInputValidator do
        do: :ok
 
   defp validate_price_level_index(_), do: {:error, :invalid_price_level_index_type}
+
+  defp validate_price(%{instruction: :delete}), do: :ok
 
   defp validate_price(%{price: price})
        when is_number(price) and price < 1,
