@@ -3,6 +3,8 @@ defmodule Exchange.State do
 
   alias Exchange.Event
 
+  use Agent
+
   @type t :: map()
   @type on_init :: Agent.on_start()
 

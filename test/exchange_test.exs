@@ -274,22 +274,6 @@ defmodule ExchangeTest do
                Exchange.send_instruction(exchange_pid, instruction)
     end
 
-    test "it returns an error if server is not running",
-         %{exchange_pid: exchange_pid} do
-      Agent.stop(exchange_pid)
-
-      instruction = %{
-        instruction: :new,
-        side: :bid,
-        price_level_index: 1,
-        price: 50.0,
-        quantity: 30
-      }
-
-      assert {:error, :exchange_is_not_running} =
-               Exchange.send_instruction(exchange_pid, instruction)
-    end
-
     test "it returns an error if any param is missing",
          %{exchange_pid: exchange_pid} do
       instruction = %{

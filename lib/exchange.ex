@@ -17,16 +17,8 @@ defmodule Exchange do
   @spec send_instruction(exchange_pid :: pid(), event :: map()) :: send_instruction_result()
   def send_instruction(exchange_pid, event) do
     with {:ok, event} <- EventInputValidator.call(event),
-         :ok <- check_exchange_server_state(exchange_pid),
          :ok <- State.apply_event(exchange_pid, event) do
       :ok
-    end
-  end
-
-  defp check_exchange_server_state(exchange_pid) do
-    case Process.alive?(exchange_pid) do
-      true -> :ok
-      false -> {:error, :exchange_is_not_running}
     end
   end
 
