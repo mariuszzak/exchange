@@ -556,5 +556,59 @@ defmodule ExchangeTest do
 
       assert Exchange.order_book(exchange_pid, 2) == expected_order_book
     end
+
+    test "existing price levels with a higher index will be shifted down" do
+      {:ok, exchange_pid} = Exchange.start_link()
+
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :new,
+          side: :bid,
+          price_level_index: 1,
+          price: 50.0,
+          quantity: 30
+        })
+
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :new,
+          side: :bid,
+          price_level_index: 2,
+          price: 30.0,
+          quantity: 25
+        })
+
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :new,
+          side: :bid,
+          price_level_index: 3,
+          price: 25.0,
+          quantity: 10
+        })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 30},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 30.0, bid_quantity: 25},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 25.0, bid_quantity: 10}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 3) == expected_order_book
+
+      :ok =
+        Exchange.send_instruction(exchange_pid, %{
+          instruction: :delete,
+          side: :bid,
+          price_level_index: 1
+        })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 30.0, bid_quantity: 25},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 25.0, bid_quantity: 10},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 0, bid_quantity: 0}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 3) == expected_order_book
+    end
   end
 end

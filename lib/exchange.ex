@@ -69,7 +69,9 @@ defmodule Exchange do
            price_level_index: price_level_index
          }
        ) do
-    delete_price_level(state, side, price_level_index)
+    state
+    |> delete_price_level(side, price_level_index)
+    |> maybe_shift_down_price_level(price_level_index + 1, side)
   end
 
   defp maybe_shift_up_price_level(state, price_level_index, side) do
@@ -81,6 +83,19 @@ defmodule Exchange do
         state
         |> maybe_shift_up_price_level(price_level_index + 1, side)
         |> insert_price_level(side, price_level_index + 1, price_level)
+    end
+  end
+
+  defp maybe_shift_down_price_level(state, price_level_index, side) do
+    case price_level(state, side, price_level_index) do
+      nil ->
+        state
+
+      price_level ->
+        state
+        |> insert_price_level(side, price_level_index - 1, price_level)
+        |> maybe_shift_down_price_level(price_level_index + 1, side)
+        |> delete_price_level(side, price_level_index + 1)
     end
   end
 
