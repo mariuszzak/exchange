@@ -403,8 +403,8 @@ defmodule ExchangeTest do
       })
 
       expected_order_book = [
-        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 30},
-        %{ask_price: 35, ask_quantity: 25, bid_price: 0, bid_quantity: 0}
+        %{ask_price: 35, ask_quantity: 25, bid_price: 50.0, bid_quantity: 30},
+        %{ask_price: 0, ask_quantity: 0, bid_price: 0, bid_quantity: 0}
       ]
 
       assert Exchange.order_book(exchange_pid, 2) == expected_order_book

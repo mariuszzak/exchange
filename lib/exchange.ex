@@ -4,31 +4,31 @@ defmodule Exchange do
   ([https://en.wikipedia.org/wiki/Order_book_(trading)](https://en.wikipedia.org/wiki/Order_book_(trading)))
   """
 
-  alias Exchange.{EventInputValidator, State}
+  alias Exchange.{EventInputValidator, OrderBook}
 
-  @spec start_link :: State.on_init()
+  @spec start_link :: OrderBook.on_init()
   def start_link do
-    State.init()
+    OrderBook.init()
   end
 
-  @type send_instruction_result ::
-          :ok | {:error, EventInputValidator.validation_error() | :exchange_is_not_running}
-
-  @spec send_instruction(exchange_pid :: pid(), event :: map()) :: send_instruction_result()
+  @spec send_instruction(exchange_pid :: pid(), event :: map()) ::
+          :ok | {:error, EventInputValidator.validation_error()}
   def send_instruction(exchange_pid, event) do
     with {:ok, event} <- EventInputValidator.call(event),
-         :ok <- State.apply_event(exchange_pid, event) do
+         :ok <- OrderBook.apply_event(exchange_pid, event) do
       :ok
     end
   end
 
   @spec order_book(exchange_pid :: pid(), book_depth :: integer()) :: list(map())
   def order_book(exchange_pid, book_depth) do
-    state = State.get(exchange_pid)
+    state = OrderBook.get(exchange_pid)
 
+    # I believe it could be written it in a more performant way, but I assumed that
+    # an order book does not need to display tons of data, so I focused on readability
     for price_level_index <- 1..book_depth do
-      ask_side = Map.get(state, {price_level_index, :ask}, %{})
-      bid_side = Map.get(state, {price_level_index, :bid}, %{})
+      ask_side = Enum.at(state.ask, price_level_index - 1, %{})
+      bid_side = Enum.at(state.bid, price_level_index - 1, %{})
 
       %{
         ask_price: Map.get(ask_side, :price, 0),

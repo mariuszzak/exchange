@@ -1,16 +1,22 @@
-defmodule Exchange.State do
+defmodule Exchange.OrderBook do
   @moduledoc false
 
   alias Exchange.Event
 
   use Agent
 
-  @type t :: map()
+  @enforce_keys [:bid, :ask]
+  defstruct [:bid, :ask]
+
+  @type t :: %__MODULE__{
+          bid: list(),
+          ask: list()
+        }
   @type on_init :: Agent.on_start()
 
   @spec init :: on_init()
   def init do
-    initial_value = %{}
+    initial_value = %__MODULE__{bid: [], ask: []}
     Agent.start_link(fn -> initial_value end)
   end
 
@@ -43,9 +49,7 @@ defmodule Exchange.State do
          }
        ) do
     new_state =
-      state
-      |> maybe_shift_up_price_level(price_level_index, side)
-      |> insert_price_level(side, price_level_index, %{price: price, quantity: quantity})
+      insert_price_level(state, side, price_level_index, %{price: price, quantity: quantity})
 
     {:ok, new_state}
   end
@@ -65,8 +69,10 @@ defmodule Exchange.State do
         {:error, :price_level_does_not_exist}
 
       _ ->
-        {:ok,
-         update_price_level(state, side, price_level_index, %{price: price, quantity: quantity})}
+        new_state =
+          update_price_level(state, side, price_level_index, %{price: price, quantity: quantity})
+
+        {:ok, new_state}
     end
   end
 
@@ -78,53 +84,27 @@ defmodule Exchange.State do
            price_level_index: price_level_index
          }
        ) do
-    new_state =
-      state
-      |> delete_price_level(side, price_level_index)
-      |> maybe_shift_down_price_level(price_level_index + 1, side)
+    new_state = delete_price_level(state, side, price_level_index)
 
     {:ok, new_state}
   end
 
-  defp maybe_shift_up_price_level(state, price_level_index, side) do
-    case price_level(state, side, price_level_index) do
-      nil ->
-        state
-
-      price_level ->
-        state
-        |> maybe_shift_up_price_level(price_level_index + 1, side)
-        |> insert_price_level(side, price_level_index + 1, price_level)
-    end
-  end
-
-  defp maybe_shift_down_price_level(state, price_level_index, side) do
-    case price_level(state, side, price_level_index) do
-      nil ->
-        state
-
-      price_level ->
-        state
-        |> insert_price_level(side, price_level_index - 1, price_level)
-        |> maybe_shift_down_price_level(price_level_index + 1, side)
-        |> delete_price_level(side, price_level_index + 1)
-    end
-  end
-
   defp price_level(state, side, price_level_index) do
-    Map.get(state, {price_level_index, side})
+    state
+    |> Map.get(side)
+    |> Enum.at(price_level_index - 1)
   end
 
   defp insert_price_level(state, side, price_level_index, price_level) do
-    Map.put(state, {price_level_index, side}, price_level)
+    Map.update!(state, side, &List.insert_at(&1, price_level_index - 1, price_level))
   end
 
   defp update_price_level(state, side, price_level_index, price_level) do
-    Map.put(state, {price_level_index, side}, price_level)
+    Map.update!(state, side, &List.replace_at(&1, price_level_index - 1, price_level))
   end
 
   defp delete_price_level(state, side, price_level_index) do
-    Map.delete(state, {price_level_index, side})
+    Map.update!(state, side, &List.delete_at(&1, price_level_index - 1))
   end
 
   defp update(exchange_pid, new_state) do
