@@ -37,11 +37,21 @@ defmodule ExchangeTest do
     test "it accepts an instruction of the 'update' type on the 'bid' side",
          %{exchange_pid: exchange_pid} do
       instruction = %{
-        instruction: :update,
+        instruction: :new,
         side: :bid,
         price_level_index: 1,
         price: 50.0,
         quantity: 30
+      }
+
+      assert :ok = Exchange.send_instruction(exchange_pid, instruction)
+
+      instruction = %{
+        instruction: :update,
+        side: :bid,
+        price_level_index: 1,
+        price: 55.0,
+        quantity: 35
       }
 
       assert :ok = Exchange.send_instruction(exchange_pid, instruction)
@@ -89,6 +99,16 @@ defmodule ExchangeTest do
 
     test "it accepts an instruction of the 'update' type on the 'ask' side",
          %{exchange_pid: exchange_pid} do
+      instruction = %{
+        instruction: :new,
+        side: :ask,
+        price_level_index: 1,
+        price: 40.0,
+        quantity: 30
+      }
+
+      assert :ok = Exchange.send_instruction(exchange_pid, instruction)
+
       instruction = %{
         instruction: :update,
         side: :ask,
@@ -609,6 +629,52 @@ defmodule ExchangeTest do
       ]
 
       assert Exchange.order_book(exchange_pid, 3) == expected_order_book
+    end
+  end
+
+  describe "market update instruction types - instruction type: :update" do
+    test "it updates price level" do
+      {:ok, exchange_pid} = Exchange.start_link()
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :new,
+        side: :bid,
+        price_level_index: 1,
+        price: 50.0,
+        quantity: 30
+      })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 50.0, bid_quantity: 30}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 1) == expected_order_book
+
+      Exchange.send_instruction(exchange_pid, %{
+        instruction: :update,
+        side: :bid,
+        price_level_index: 1,
+        price: 55.0,
+        quantity: 25
+      })
+
+      expected_order_book = [
+        %{ask_price: 0, ask_quantity: 0, bid_price: 55.0, bid_quantity: 25}
+      ]
+
+      assert Exchange.order_book(exchange_pid, 1) == expected_order_book
+    end
+
+    test "if the event is for a price level that has not yet been created an error must be returned" do
+      {:ok, exchange_pid} = Exchange.start_link()
+
+      assert Exchange.send_instruction(exchange_pid, %{
+               instruction: :update,
+               side: :bid,
+               price_level_index: 1,
+               price: 50.0,
+               quantity: 30
+             }) == {:error, :price_level_does_not_exist}
     end
   end
 end
